@@ -7,6 +7,8 @@ package com.example.springtutorial;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
@@ -54,7 +56,7 @@ public class MainController {
         if (wishList == null) {
             wishList = new ArrayList<>();
         }
-        Wish wish = new Wish("test wish");
+        Wish wish = new Wish("test wish at " + LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME));
         wishList.add(wish);
         person.setWishList(wishList);
         personRepository.save(person);
