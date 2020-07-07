@@ -51,7 +51,7 @@ public class MainController {
         Person person = personRepository.findById(id);
 
         List<Wish> wishList = person.getWishList();
-        if (wishList==null){
+        if (wishList == null) {
             wishList = new ArrayList<>();
         }
         Wish wish = new Wish("test wish");
