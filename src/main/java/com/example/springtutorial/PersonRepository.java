@@ -9,7 +9,7 @@ import java.util.List;
 /**
  * @author g.gaziev (g.gaziev@itfbgroup.ru)
  */
-@RepositoryRestResource(collectionResourceRel = "people", path = "people")
+@RepositoryRestResource
 public interface PersonRepository extends CrudRepository<Person, Long> {
 
     List<Person> findByLastName(@Param("name") String name);

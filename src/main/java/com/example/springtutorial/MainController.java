@@ -5,31 +5,31 @@ package com.example.springtutorial;
  */
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.HttpServerErrorException;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.Optional;
 
 @RestController
 public class MainController {
-    private static final String template = "Hello, %s!";
-    private final AtomicLong counter = new AtomicLong();
 
     @Autowired
     private PersonRepository personRepository;
 
-    @GetMapping("/greeting")
-    public Greeting greeting(@RequestParam(value = "name", defaultValue = "World") String name) {
-        return new Greeting(counter.incrementAndGet(), String.format(template, name));
-    }
-
     @PostMapping("/person")
     public @ResponseBody
-    Person addPerson(@RequestParam String firstName, @RequestParam String lastName) {
-        Person person = new Person(firstName, lastName);
+    long addPerson(@RequestBody Person person) {
         personRepository.save(person);
-        return person;
+        return person.getId();
+    }
+
+    @GetMapping("/person/{io}")
+    public @ResponseBody
+    Person getPerson(@PathVariable long id) {
+        return personRepository.findById(id);
     }
 
     @GetMapping(path = "/person/all")
@@ -46,19 +46,32 @@ public class MainController {
 
     }
 
-    @PutMapping(path = "/person/{id}/wishes")
-    public Wish addToWishlist(@PathVariable long id) {
+    @PostMapping(path = "/person/{id}/wishes")
+    public Wish addToWishlist(@PathVariable long id, @RequestBody Wish wish) {
         Person person = personRepository.findById(id);
 
         List<Wish> wishList = person.getWishList();
-        if (wishList==null){
+        if (wishList == null) {
             wishList = new ArrayList<>();
         }
-        Wish wish = new Wish("test wish");
         wishList.add(wish);
         person.setWishList(wishList);
         personRepository.save(person);
         return wish;
+    }
+
+    @PostMapping(path = "/person/{id}/wishes/{wishId}")
+    public Wish editWish(@PathVariable long id, @RequestBody Wish newWish, @PathVariable long wishId) {
+        Person person = personRepository.findById(id);
+
+        List<Wish> wishList = person.getWishList();
+        Optional<Wish> optWish = wishList.stream().filter(personWish -> personWish.getId() == wishId).findFirst();
+        if (optWish.isPresent()) {
+            Wish oldWish = optWish.get();
+            oldWish.setDescription(newWish.getDescription());
+            oldWish.setTaken(newWish.isTaken());
+            return oldWish;
+        } else throw new HttpServerErrorException(HttpStatus.NOT_FOUND);
     }
 
 }
