@@ -26,7 +26,7 @@ public class MainController {
         return person.getId();
     }
 
-    @GetMapping("/person/{io}")
+    @GetMapping("/person/{id}")
     public @ResponseBody
     Person getPerson(@PathVariable long id) {
         return personRepository.findById(id);
@@ -43,7 +43,6 @@ public class MainController {
     Iterable<Wish> getUserWishes(@PathVariable long id) {
         Person person = personRepository.findById(id);
         return person.getWishList();
-
     }
 
     @PostMapping(path = "/person/{id}/wishes")
