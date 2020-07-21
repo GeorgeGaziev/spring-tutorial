@@ -44,7 +44,7 @@ class SpringTutorialApplicationTests {
     private ObjectMapper objectMapper;
 
     @BeforeAll
-    void setUpData() {
+    void setUpData() throws Exception {
         final String TEST_USER_FIRST_NAME = "SuperSecretTestUserFirstName";
         final String TEST_USER_LAST_NAME = "SuperSecretTestUserLastName";
 
@@ -57,7 +57,16 @@ class SpringTutorialApplicationTests {
             }
         };
         mockPerson.setWishList(listOfWishes);
-        personRepository.save(mockPerson);
+
+        String json = gson.toJson(mockPerson);
+
+        MvcResult result = this.mockMvc.perform(post("/person")
+                .contentType(MediaType.APPLICATION_JSON).content(json))
+                .andDo(print())
+                .andExpect(status().isOk()).andReturn();
+        long generatedId = Long.parseLong(result.getResponse().getContentAsString());
+        mockPerson.setId(generatedId);
+        mockPerson.setWishList(personRepository.findById(generatedId).getWishList());
     }
 
 
@@ -71,7 +80,7 @@ class SpringTutorialApplicationTests {
         this.mockMvc.perform(post("/person")
                 .contentType(MediaType.APPLICATION_JSON).content(json))
                 .andDo(print())
-                .andExpect(status().isOk()).andReturn();
+                .andExpect(status().isOk());
     }
 
     @Test

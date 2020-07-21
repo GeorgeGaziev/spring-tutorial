@@ -26,7 +26,7 @@ public class Person {
 
     @ElementCollection
     @Cascade(org.hibernate.annotations.CascadeType.ALL)
-    @OneToMany(targetEntity = Wish.class)
+    @OneToMany(targetEntity = Wish.class, fetch=FetchType.EAGER)
     private List<Wish> wishList = new ArrayList<>();
 
     public Person(String firstName, String lastName) {
