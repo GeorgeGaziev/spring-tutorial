@@ -1,9 +1,13 @@
 package com.example.springtutorial;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.type.CollectionType;
 import com.google.gson.Gson;
 import org.assertj.core.api.SoftAssertions;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -16,8 +20,12 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.hamcrest.Matchers.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
@@ -34,7 +42,6 @@ class SpringTutorialApplicationTests {
     private final SoftAssertions softAssertions = new SoftAssertions();
 
     Gson gson = new Gson();
-    Person mockPerson;
 
     @Autowired
     private MockMvc mockMvc;
@@ -42,33 +49,6 @@ class SpringTutorialApplicationTests {
     private PersonRepository personRepository;
     @Autowired
     private ObjectMapper objectMapper;
-
-    @BeforeAll
-    void setUpData() throws Exception {
-        final String TEST_USER_FIRST_NAME = "SuperSecretTestUserFirstName";
-        final String TEST_USER_LAST_NAME = "SuperSecretTestUserLastName";
-
-        mockPerson = new Person(TEST_USER_FIRST_NAME, TEST_USER_LAST_NAME);
-        ArrayList<Wish> listOfWishes = new ArrayList<Wish>() {
-            {
-                add(new Wish("test_wish_1"));
-                add(new Wish("test_wish_2"));
-                add(new Wish("test_wish_3"));
-            }
-        };
-        mockPerson.setWishList(listOfWishes);
-
-        String json = gson.toJson(mockPerson);
-
-        MvcResult result = this.mockMvc.perform(post("/person")
-                .contentType(MediaType.APPLICATION_JSON).content(json))
-                .andDo(print())
-                .andExpect(status().isOk()).andReturn();
-        long generatedId = Long.parseLong(result.getResponse().getContentAsString());
-        mockPerson.setId(generatedId);
-        mockPerson.setWishList(personRepository.findById(generatedId).getWishList());
-    }
-
 
     @Test
     @DisplayName("Add new person")
@@ -86,6 +66,8 @@ class SpringTutorialApplicationTests {
     @Test
     @DisplayName("Get person detail info")
     void getPersonInfo() throws Exception {
+        Person mockPerson = createTestPerson();
+
         MvcResult result = this.mockMvc.perform(get("/person/" + mockPerson.getId()))
                 .andDo(print())
                 .andExpect(status().isOk()).andReturn();
@@ -107,16 +89,18 @@ class SpringTutorialApplicationTests {
 
         softAssertions.assertThat(person.getWishList())
                 .as("Person wishlist")
-                .isNotEmpty();
+                .isNotNull();
 
         softAssertions.assertAll();
     }
 
 
     @Test
-    @DisplayName("Get list of persons")
+    @DisplayName("Get list of all persons")
     void getAllPersons() throws Exception {
-        this.mockMvc.perform(get("/person/all"))
+        Person mockPerson = createTestPerson();
+
+        this.mockMvc.perform(get("/person"))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.*", isA(ArrayList.class)))
@@ -128,6 +112,7 @@ class SpringTutorialApplicationTests {
     @Test
     @DisplayName("Add wish to a person")
     void addPersonWish() throws Exception {
+        Person mockPerson = createTestPerson();
 
         Wish wish = new Wish("test_wish");
         String json = gson.toJson(wish);
@@ -140,13 +125,56 @@ class SpringTutorialApplicationTests {
         String contentAsString = result.getResponse().getContentAsString();
         Wish createdWish = objectMapper.readValue(contentAsString, Wish.class);
 
-        Assertions.assertEquals(wish, createdWish);
+        assertEquals(wish, createdWish);
     }
+
+    @Test
+    @DisplayName("Add wish to a person with null wishlist")
+    void addPersonWishNullWishlist() throws Exception {
+        Person mockPerson = createTestPerson();
+        mockPerson.setWishList(null);
+
+        Wish wish = new Wish("test_wish");
+        String json = gson.toJson(wish);
+        MvcResult result = this.mockMvc.perform(post("/person/" + mockPerson.getId() + "/wishes")
+                .contentType(MediaType.APPLICATION_JSON).content(json))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andReturn();
+
+        String contentAsString = result.getResponse().getContentAsString();
+        Wish createdWish = objectMapper.readValue(contentAsString, Wish.class);
+
+        assertEquals(wish, createdWish);
+    }
+
+    @Test
+    @DisplayName("Get person wishlist")
+    void getPersonWishList() throws Exception {
+        Person mockPerson = createTestPerson();
+        List<Wish> wishlist = mockPerson.getWishList();
+
+        MvcResult result = this.mockMvc.perform(get("/person/" + mockPerson.getId() + "/wishes"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.*", isA(ArrayList.class)))
+                .andExpect(jsonPath("$.*", hasSize(greaterThan(0))))
+                .andReturn();
+
+        CollectionType javaType = objectMapper.getTypeFactory()
+                .constructCollectionType(List.class, Wish.class);
+
+        String contentAsString = result.getResponse().getContentAsString();
+        List<Wish> responseWishlist = objectMapper.readValue(contentAsString, javaType);
+
+        assertIterableEquals(wishlist, responseWishlist);
+    }
+
 
     @Test
     @DisplayName("Edit person's wish")
     void editPersonWish() throws Exception {
-
+        Person mockPerson = createTestPerson();
 
         List<Wish> wishListToUpdate = mockPerson.getWishList();
         Wish wishToUpdate = wishListToUpdate.get(0);
@@ -164,7 +192,57 @@ class SpringTutorialApplicationTests {
         String contentAsString = result.getResponse().getContentAsString();
         Wish updatedWish = objectMapper.readValue(contentAsString, Wish.class);
 
-        Assertions.assertEquals(updatedWish, wishToUpdate);
+        assertEquals(updatedWish, wishToUpdate);
     }
 
+    @Test
+    @DisplayName("Edit person's non-existing wish")
+    void editPersonFakeWish() throws Exception {
+        Person mockPerson = createTestPerson();
+
+        List<Wish> wishListToUpdate = mockPerson.getWishList();
+        Wish wishToUpdate = wishListToUpdate.get(0);
+        wishToUpdate.setDescription("upd_" + System.currentTimeMillis() + wishToUpdate.getDescription());
+
+        String json = gson.toJson(wishToUpdate);
+
+        this.mockMvc.perform(post("/person/" + mockPerson.getId() + "/wishes/" + System.currentTimeMillis())
+                .contentType(MediaType.APPLICATION_JSON).content(json))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("Take person's wish")
+    void takePersonWish() throws Exception {
+        Person mockPerson = createTestPerson();
+
+        List<Wish> wishListToUpdate = mockPerson.getWishList();
+        Wish wishToUpdate = wishListToUpdate.get(0);
+
+        this.mockMvc.perform(post("/person/" + mockPerson.getId() + "/wishes/" + wishToUpdate.getId() + "/take"))
+                .andDo(print())
+                .andExpect(status().isOk());
+
+        Person mockPersonWithTakenWish = personRepository.findById(mockPerson.getId());
+        Assertions.assertTrue(mockPersonWithTakenWish.getWishList().stream().filter(wish -> wish == wishToUpdate).anyMatch(Wish::isTaken));
+    }
+
+    /**
+     * Create mock person with wishlist
+     *
+     * @return mock person object
+     */
+    private Person createTestPerson() {
+
+        Person mockPerson = new Person("Adding", "Person" + LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME));
+
+        ArrayList<Wish> listOfWishes = Stream.of(
+                new Wish("test_wish_1"),
+                new Wish("test_wish_2"),
+                new Wish("test_wish_3")).collect(Collectors.toCollection(ArrayList::new));
+        mockPerson.setWishList(listOfWishes);
+
+        personRepository.save(mockPerson);
+        return mockPerson;
+    }
 }
