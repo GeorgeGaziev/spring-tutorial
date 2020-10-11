@@ -3,6 +3,7 @@ package com.example.springtutorial.controllers;
 import com.example.springtutorial.userClasses.Person;
 import com.example.springtutorial.userClasses.PersonRepository;
 import com.example.springtutorial.userClasses.Wish;
+import com.example.springtutorial.userClasses.WishRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.rest.webmvc.ResourceNotFoundException;
 import org.springframework.http.HttpStatus;
@@ -18,6 +19,8 @@ public class MainController {
 
     @Autowired
     private PersonRepository personRepository;
+    @Autowired
+    private WishRepository wishRepository;
 
     @PostMapping("/person")
     public @ResponseBody
@@ -46,17 +49,19 @@ public class MainController {
     }
 
     @PostMapping(path = "/person/{id}/wishes")
-    public Wish addToWishlist(@PathVariable long id, @RequestBody Wish wish) {
+    public Wish addToWishlist(@PathVariable long id, @RequestBody String description) {
         Person person = personRepository.findById(id);
 
         List<Wish> wishList = person.getWishList();
         if (wishList == null) {
             wishList = new ArrayList<>();
         }
+        Wish wish = new Wish(description);
         wishList.add(wish);
         person.setWishList(wishList);
         personRepository.save(person);
-        return wish;
+
+        return wishList.get(wishList.size()-1);
     }
 
     @PostMapping(path = "/person/{id}/wishes/{wishId}")
@@ -71,6 +76,20 @@ public class MainController {
             return oldWish;
         } else throw new ResourceNotFoundException();
 
+    }
+
+    @DeleteMapping(path = "/person/{personId}/wishes/{wishId}")
+    public void deleteWish(@PathVariable long personId, @PathVariable long wishId) {
+        Person person = personRepository.findById(personId);
+        List<Wish> wishList = person.getWishList();
+        Optional<Wish> optWish = wishList.stream().filter(personWish -> personWish.getId() == wishId).findFirst();
+        if (optWish.isPresent()) {
+            Wish oldWish = optWish.get();
+            wishList.remove(oldWish);
+            person.setWishList(wishList);
+            personRepository.save(person);
+            wishRepository.deleteById(oldWish.getId());
+        } else throw new ResourceNotFoundException();
     }
 
     @PostMapping(path = "/person/{id}/wishes/{wishId}/take")

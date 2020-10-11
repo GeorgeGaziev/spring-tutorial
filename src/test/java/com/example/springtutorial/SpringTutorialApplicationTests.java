@@ -29,8 +29,7 @@ import java.util.stream.Stream;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertIterableEquals;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -116,31 +115,35 @@ class SpringTutorialApplicationTests {
     @DisplayName("Add wish to a person")
     void addPersonWish() throws Exception {
         Person mockPerson = createTestPerson();
-
-        Wish wish = new Wish("test_wish");
-        String json = gson.toJson(wish);
+        String wishDescription = "test_wish" + System.currentTimeMillis();
         MvcResult result = this.mockMvc.perform(post("/person/" + mockPerson.getId() + "/wishes")
-                .contentType(MediaType.APPLICATION_JSON).content(json))
+                .contentType(MediaType.APPLICATION_JSON).content(wishDescription))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andReturn();
 
         String contentAsString = result.getResponse().getContentAsString();
         Wish createdWish = objectMapper.readValue(contentAsString, Wish.class);
+        SoftAssertions softAssertions = new SoftAssertions();
+        softAssertions.assertThat(createdWish.getDescription())
+                .as("Received wish description")
+                .isEqualTo(wishDescription);
 
-        assertEquals(wish, createdWish);
+        softAssertions.assertThat(createdWish.getId())
+                .as("Received wish id")
+                .isNotEqualTo("0");
+        softAssertions.assertAll();
     }
 
     @Test
     @DisplayName("Add wish to a person with null wishlist")
-    void addPersonWishNullWishlist() throws Exception {
+    void addWishToNullWishlist() throws Exception {
         Person mockPerson = createTestPerson();
         mockPerson.setWishList(null);
 
-        Wish wish = new Wish("test_wish");
-        String json = gson.toJson(wish);
+        String wishDescription = "test_wish" + System.currentTimeMillis();
         MvcResult result = this.mockMvc.perform(post("/person/" + mockPerson.getId() + "/wishes")
-                .contentType(MediaType.APPLICATION_JSON).content(json))
+                .contentType(MediaType.APPLICATION_JSON).content(wishDescription))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andReturn();
@@ -148,7 +151,15 @@ class SpringTutorialApplicationTests {
         String contentAsString = result.getResponse().getContentAsString();
         Wish createdWish = objectMapper.readValue(contentAsString, Wish.class);
 
-        assertEquals(wish, createdWish);
+        SoftAssertions softAssertions = new SoftAssertions();
+        softAssertions.assertThat(createdWish.getDescription())
+                .as("Received wish description")
+                .isEqualTo(wishDescription);
+
+        softAssertions.assertThat(createdWish.getId())
+                .as("Received wish id")
+                .isNotEqualTo("0");
+        softAssertions.assertAll();
     }
 
     @Test
@@ -228,6 +239,32 @@ class SpringTutorialApplicationTests {
 
         Person mockPersonWithTakenWish = personRepository.findById(mockPerson.getId());
         Assertions.assertTrue(mockPersonWithTakenWish.getWishList().stream().filter(wish -> wish == wishToUpdate).anyMatch(Wish::isTaken));
+    }
+
+    @Test
+    @DisplayName("Delete person's wish")
+    void deletePersonWish() throws Exception {
+        Person mockPerson = createTestPerson();
+
+        List<Wish> wishListToUpdate = mockPerson.getWishList();
+        Wish wishToDelete = wishListToUpdate.get(0);
+
+        this.mockMvc.perform(delete("/person/" + mockPerson.getId() + "/wishes/" + wishToDelete.getId()))
+                .andDo(print())
+                .andExpect(status().isOk());
+
+        Person mockPersonWithDeletedWish = personRepository.findById(mockPerson.getId());
+        Assertions.assertTrue(mockPersonWithDeletedWish.getWishList().stream().noneMatch(wish -> wish == wishToDelete));
+    }
+
+    @Test
+    @DisplayName("Delete person's non-existing wish")
+    void deletePersonFakeWish() throws Exception {
+        Person mockPerson = createTestPerson();
+
+        this.mockMvc.perform(delete("/person/" + mockPerson.getId() + "/wishes/" + System.currentTimeMillis()))
+                .andDo(print())
+                .andExpect(status().isNotFound());
     }
 
     /**

@@ -5,7 +5,7 @@ import lombok.Setter;
 import org.hibernate.annotations.Cascade;
 
 import javax.persistence.*;
-import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 
@@ -16,6 +16,7 @@ import java.util.Objects;
 @Getter
 @Setter
 public class Person {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
@@ -25,15 +26,16 @@ public class Person {
 
     @ElementCollection
     @Cascade(org.hibernate.annotations.CascadeType.ALL)
-    @OneToMany(targetEntity = Wish.class, fetch=FetchType.EAGER)
-    private List<Wish> wishList = new ArrayList<>();
+    @OneToMany(targetEntity = Wish.class, fetch = FetchType.EAGER)
+    private List<Wish> wishList = new LinkedList<>();
 
     public Person(String firstName, String lastName) {
         this.firstName = firstName;
         this.lastName = lastName;
     }
 
-    public Person() {}
+    public Person() {
+    }
 
     @Override
     public boolean equals(Object o) {
