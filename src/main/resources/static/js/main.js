@@ -1,12 +1,14 @@
 var personApi = Vue.resource('/person{/id}')
-var personWishApi = Vue.resource('/person/62/wishes{/wishId}')
 
-function getPersonWishRecourse(personId) {
+function getPersonWishResource(personId) {
     return Vue.resource('person/' + personId + '/wishes{/wishId}')
 }
 
 Vue.component('wish-form', {
-    props: ['wishes'],
+    props: {
+        wishes: Array,
+        personId: Number
+    },
     data: function () {
         return {
             text: ''
@@ -18,7 +20,7 @@ Vue.component('wish-form', {
         '</div>',
     methods: {
         save: function () {
-            personWishApi.save({}, this.text).then(result =>
+            getPersonWishResource(this.personId).save({}, this.text).then(result =>
                 result.json().then(data => {
                     this.wishes.push(data);
                     this.text = ''
@@ -37,7 +39,7 @@ Vue.component('wish-row', {
     template: '<li><b>{{ wish.id }}</b> - {{ wish.description }} <input type="button" value="delete" @click="remove"/> </li>',
     methods: {
         remove: function () {
-            getPersonWishRecourse(this.personId).remove({
+            getPersonWishResource(this.personId).remove({
                 wishId: this.wish.id
             });
             this.$parent.removeWish(this.wish.id);
@@ -49,7 +51,7 @@ Vue.component('person-row', {
     props: ['person'],
     template: '<div>{{ person.lastName }} {{ person.firstName }}' +
         '<ul><wish-row v-for="wish in person.wishList" v-bind:key="wish.id" :wish="wish" :personId="person.id" /> </ul>' +
-        '<wish-form :wishes="person.wishList" />' +
+        '<wish-form :wishes="person.wishList" :personId="person.id" />' +
         '</div>',
 
     methods: {
