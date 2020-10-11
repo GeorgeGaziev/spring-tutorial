@@ -1,4 +1,4 @@
-package com.example.springtutorial;
+package com.example.springtutorial.userClasses;
 
 import lombok.Getter;
 import lombok.Setter;

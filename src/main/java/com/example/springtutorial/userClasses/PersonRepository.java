@@ -1,4 +1,4 @@
-package com.example.springtutorial;
+package com.example.springtutorial.userClasses;
 
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;

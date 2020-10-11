@@ -1,5 +1,8 @@
 package com.example.springtutorial;
 
+import com.example.springtutorial.userClasses.Person;
+import com.example.springtutorial.userClasses.PersonRepository;
+import com.example.springtutorial.userClasses.Wish;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.CollectionType;
 import com.google.gson.Gson;

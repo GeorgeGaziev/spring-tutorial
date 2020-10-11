@@ -1,6 +1,5 @@
-package com.example.springtutorial;
+package com.example.springtutorial.userClasses;
 
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.Cascade;

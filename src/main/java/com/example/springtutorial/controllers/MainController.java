@@ -1,5 +1,8 @@
-package com.example.springtutorial;
+package com.example.springtutorial.controllers;
 
+import com.example.springtutorial.userClasses.Person;
+import com.example.springtutorial.userClasses.PersonRepository;
+import com.example.springtutorial.userClasses.Wish;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.rest.webmvc.ResourceNotFoundException;
 import org.springframework.http.HttpStatus;
